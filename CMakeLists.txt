@@ -61,6 +61,15 @@ FetchContent_Declare(S_tructures
     SYSTEM)
 FetchContent_MakeAvailable(S_tructures)
 
+set(S_FIXED_BUILD_TEST OFF CACHE INTERNAL "")
+
+FetchContent_Declare(S_fixed
+    GIT_REPOSITORY https://github.com/Schwungus/S_fixed.git
+    GIT_TAG 8667493230501d7d1b1ba5e3454b263c228035df
+    EXCLUDE_FROM_ALL
+    SYSTEM)
+FetchContent_MakeAvailable(S_fixed)
+
 FetchContent_Declare(NutBlast
 	GIT_REPOSITORY https://github.com/Schwungus/NutBlast.git
 	GIT_TAG 44d2dfe08c5eccb9f25936659d4bb801e7b17457
@@ -68,7 +77,7 @@ FetchContent_Declare(NutBlast
     SYSTEM)
 FetchContent_MakeAvailable(NutBlast)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3-static S_tructures NutBlast)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3-static S_tructures S_fixed NutBlast)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/generated)
 
 if(MSVC)
