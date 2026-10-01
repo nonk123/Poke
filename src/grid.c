@@ -93,8 +93,6 @@ static GridCoord fx_ceil(Fixed v) {
 }
 
 Grid grid_rotate(Grid* self, Fixed angle) {
-	Grid out = {0};
-
 	const Fixed c = Fcos(angle);
 	const Fixed s = Fsin(angle);
 
@@ -135,6 +133,8 @@ Grid grid_rotate(Grid* self, Fixed angle) {
 				maxy = ay;
 		}
 	}
+
+	Grid out = {0};
 
 	for (GridCoord dy = miny; dy <= maxy; dy++) {
 		for (GridCoord dx = minx; dx <= maxx; dx++) {
