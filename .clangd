@@ -1,0 +1,4 @@
+Completion:
+  HeaderInsertion: Never
+CompileFlags:
+  Remove: [-fdeps-format=*, -fmodules-ts, -fmodule-mapper=*]
