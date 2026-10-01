@@ -22,7 +22,13 @@ AABB screen_viewport() {
 }
 
 AABB viewport() {
-	AABB out = screen_viewport();
+	AABB out = screen_viewport(), screen = out;
+
+	out.min.x -= screen.max.x / 2;
+	out.min.y -= screen.max.y / 2;
+
+	out.max.x -= screen.max.x / 2;
+	out.max.y -= screen.max.y / 2;
 
 	out.min.x /= g_camera.zoom;
 	out.min.y /= g_camera.zoom;
