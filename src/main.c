@@ -90,7 +90,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 		simulate(body, &world);
 
 		Grid rotated = grid_rotate(&body->shape, body->angle);
-		body->angle = Fadd(body->angle, Fmul(Fx2Pi, TIMESTEP));
+		body->angle = Fadd(body->angle, Fmul(Fdiv(FxPi, FxFrom(8)), TIMESTEP));
 
 		AABB aabb = grid_aabb(&rotated);
 

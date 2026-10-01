@@ -78,28 +78,78 @@ static Grid shear_y(Grid* self, Fixed k) {
 	return out;
 }
 
+static GridCoord fx_floor(Fixed v) {
+	GridCoord i = FxToInt(v);
+	if (FxFrom((double)i) > v)
+		i--;
+	return i;
+}
+
+static GridCoord fx_ceil(Fixed v) {
+	GridCoord i = FxToInt(v);
+	if (FxFrom((double)i) < v)
+		i++;
+	return i;
+}
+
 Grid grid_rotate(Grid* self, Fixed angle) {
-	if (Fabs(angle) == FxPi) {
-		Grid out = {0};
+	Grid out = {0};
 
-		TINY_MAP_FOREACH (&self->cells, it) {
-			GridPoint p = uncrunch_point(it.bucket->hash);
-			p.x = -p.x, p.y = -p.y;
-			grid_put(&out, p, *(PaletteIndex*)it.data);
+	const Fixed c = Fcos(angle);
+	const Fixed s = Fsin(angle);
+
+	const AABB aabb = grid_aabb(self);
+
+	const Fixed x0 = Fsub(FxFrom((double)aabb.min.x), FxHalf);
+	const Fixed y0 = Fsub(FxFrom((double)aabb.min.y), FxHalf);
+	const Fixed x1 = Fadd(FxFrom((double)aabb.max.x), FxHalf);
+	const Fixed y1 = Fadd(FxFrom((double)aabb.max.y), FxHalf);
+
+	const Fixed cx[4] = {x0, x1, x0, x1};
+	const Fixed cy[4] = {y0, y0, y1, y1};
+
+	GridCoord minx = 0, miny = 0, maxx = 0, maxy = 0;
+
+	for (int i = 0; i < 4; i++) {
+		const Fixed rx = Fsub(Fmul(c, cx[i]), Fmul(s, cy[i]));
+		const Fixed ry = Fadd(Fmul(s, cx[i]), Fmul(c, cy[i]));
+
+		const GridCoord ix = fx_floor(rx);
+		const GridCoord iy = fx_floor(ry);
+		const GridCoord ax = fx_ceil(rx);
+		const GridCoord ay = fx_ceil(ry);
+
+		if (i == 0) {
+			minx = ix;
+			maxx = ax;
+			miny = iy;
+			maxy = ay;
+		} else {
+			if (ix < minx)
+				minx = ix;
+			if (ax > maxx)
+				maxx = ax;
+			if (iy < miny)
+				miny = iy;
+			if (ay > maxy)
+				maxy = ay;
 		}
-
-		return out;
-	} else {
-		const Fixed t = Ftan(Fmul(angle, FxFrom(0.5)));
-		const Fixed s = Fsin(angle);
-
-		Grid g1 = shear_x(self, -t);
-		Grid g2 = shear_y(&g1, s);
-		free_grid(&g1);
-
-		Grid out = shear_x(&g2, -t);
-		free_grid(&g2);
-
-		return out;
 	}
+
+	for (GridCoord dy = miny; dy <= maxy; dy++) {
+		for (GridCoord dx = minx; dx <= maxx; dx++) {
+			const Fixed fdx = FxFrom(dx);
+			const Fixed fdy = FxFrom(dy);
+
+			const Fixed sx = Fadd(Fmul(c, fdx), Fmul(s, fdy));
+			const Fixed sy = Fadd(Fmul(-s, fdx), Fmul(c, fdy));
+
+			PaletteIndex* v = grid_at(self, GRID_XY(FxToInt(sx), FxToInt(sy)));
+
+			if (v)
+				grid_put(&out, GRID_XY(dx, dy), *v);
+		}
+	}
+
+	return out;
 }
