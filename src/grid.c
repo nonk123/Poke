@@ -53,3 +53,53 @@ AABB grid_aabb(Grid* self) {
 
 	return aabb;
 }
+
+static Grid shear_x(Grid* self, Fixed k) {
+	Grid out = {0};
+
+	TINY_MAP_FOREACH (&self->cells, it) {
+		GridPoint p = uncrunch_point(it.bucket->hash);
+		p.x += (GridCoord)Fx2Int(Fmul(k, FxFrom(p.y)));
+		grid_put(&out, p, *(PaletteIndex*)it.data);
+	}
+
+	return out;
+}
+
+static Grid shear_y(Grid* self, Fixed k) {
+	Grid out = {0};
+
+	TINY_MAP_FOREACH (&self->cells, it) {
+		GridPoint p = uncrunch_point(it.bucket->hash);
+		p.y += (GridCoord)Fx2Int(Fmul(k, FxFrom(p.x)));
+		grid_put(&out, p, *(PaletteIndex*)it.data);
+	}
+
+	return out;
+}
+
+Grid grid_rotate(Grid* self, Fixed angle) {
+	if (Fabs(angle) == FxPi) {
+		Grid out = {0};
+
+		TINY_MAP_FOREACH (&self->cells, it) {
+			GridPoint p = uncrunch_point(it.bucket->hash);
+			p.x = -p.x, p.y = -p.y;
+			grid_put(&out, p, *(PaletteIndex*)it.data);
+		}
+
+		return out;
+	} else {
+		const Fixed t = Ftan(Fmul(angle, FxFrom(0.5)));
+		const Fixed s = Fsin(angle);
+
+		Grid g1 = shear_x(self, -t);
+		Grid g2 = shear_y(&g1, s);
+		free_grid(&g1);
+
+		Grid out = shear_x(&g2, -t);
+		free_grid(&g2);
+
+		return out;
+	}
+}

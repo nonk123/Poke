@@ -1,13 +1,12 @@
 #include "body.h"
+#include "game.h"
 
-static const int TICKRATE = 60;
 static const Vec2 GRAVITY = XY(0.0, -9.8);
-static const Fixed TIMESTEP = Fdiv(Fx1, FxFrom(TICKRATE));
 
 static void resolve_collision(Body* self, Body* other) {}
 
 void simulate(Body* self, World* world) {
-	self->linvel = v2add(self->linvel, v2scale(GRAVITY, TIMESTEP));
+	// self->linvel = v2add(self->linvel, v2scale(GRAVITY, TIMESTEP));
 	self->translation = v2add(self->translation, v2scale(self->linvel, TIMESTEP));
 
 	for (size_t i = 0; i < TinyDLength(world->bodies); i++) {

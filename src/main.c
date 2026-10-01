@@ -9,13 +9,13 @@
 
 #include "body.h"
 #include "cmake.h"
+#include "game.h"
 #include "sdl.h"
+#include "viewport.h"
 
 SDL_Window* g_window = NULL;
 SDL_Renderer* g_renderer = NULL;
 static World world = {0};
-
-static const int SCALE = 24;
 
 static SDL_AppResult die() {
 	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Shit! %s", SDL_GetError());
@@ -41,13 +41,18 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	world.bodies = MakeTinyD(Body);
 
 	Body body = {0};
+	const int hw = 7, hh = 3;
 
-	body.translation = XY(16, 48);
+	for (int x = -hw; x <= hw; x++) {
+		for (int y = -hh; y <= hh; y++) {
+			PaletteIndex idx = PLT_DUNG;
 
-	grid_put(&body.shape, GRID_XY(0, 0), PLT_TUNG);
-	grid_put(&body.shape, GRID_XY(1, 0), PLT_DUNG);
-	grid_put(&body.shape, GRID_XY(0, 1), PLT_DUNG);
-	grid_put(&body.shape, GRID_XY(1, 1), PLT_TUNG);
+			if (SDL_abs(x) == hw || SDL_abs(y) == hh)
+				idx = PLT_TUNG;
+
+			grid_put(&body.shape, GRID_XY(x, y), idx);
+		}
+	}
 
 	world.bodies = TinyDPush(world.bodies, &body);
 
@@ -73,48 +78,53 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 SDL_AppResult SDL_AppIterate(void* appstate) {
 	(void)appstate;
 
+	const bool* kb = SDL_GetKeyboardState(NULL);
+	g_camera.position.x += (int)(kb[SDL_SCANCODE_D]) - (int)(kb[SDL_SCANCODE_A]);
+	g_camera.position.y += (int)(kb[SDL_SCANCODE_W]) - (int)(kb[SDL_SCANCODE_S]);
+
 	SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 	SDL_RenderClear(g_renderer);
-
-	GridPoint camera_pos = GRID_XY(0, 0);
-
-	SDL_Rect sdl_viewport = {0};
-	SDL_GetRenderViewport(g_renderer, &sdl_viewport);
-
-	AABB viewport = {camera_pos};
-
-	viewport.max = viewport.min;
-	viewport.max.x += sdl_viewport.w / SCALE;
-	viewport.max.y += sdl_viewport.h / SCALE;
 
 	for (size_t i = 0; i < TinyDLength(world.bodies); i++) {
 		Body* body = &world.bodies[i];
 		simulate(body, &world);
 
-		AABB aabb = grid_aabb(&body->shape);
+		Grid rotated = grid_rotate(&body->shape, body->angle);
+		body->angle = Fadd(body->angle, Fmul(Fx2Pi, TIMESTEP));
 
-		if (aabb.min.x < viewport.min.x || aabb.min.x > viewport.max.x)
-			continue;
+		AABB aabb = grid_aabb(&rotated);
 
-		if (aabb.min.y < viewport.min.y || aabb.min.y > viewport.max.y)
-			continue;
+		aabb.min.x += Fx2Int(body->translation.x);
+		aabb.min.y += Fx2Int(body->translation.y);
 
-		// TODO: project the rotated & translated shape onto the main grid
-		TINY_MAP_FOREACH (&body->shape.cells, it) {
+		aabb.max.x += Fx2Int(body->translation.x);
+		aabb.max.y += Fx2Int(body->translation.y);
+
+		if (aabb.max.x < viewport().min.x || aabb.min.x > viewport().max.x)
+			goto next;
+
+		if (aabb.max.y < viewport().min.y || aabb.min.y > viewport().max.y)
+			goto next;
+
+		TINY_MAP_FOREACH (&rotated.cells, it) {
 			Palette plt = g_palette[*(PaletteIndex*)it.data];
 			SDL_SetRenderDrawColor(g_renderer, plt.r, plt.g, plt.b, SDL_ALPHA_OPAQUE);
 
 			GridPoint point = uncrunch_point(it.bucket->hash);
-			point.x += camera_pos.x + Fx2Int(body->translation.x);
-			point.y += camera_pos.y + Fx2Int(body->translation.y);
+			point.x += Fx2Int(body->translation.x);
+			point.y += Fx2Int(body->translation.y);
 
 			SDL_FRect rect = {0};
-			rect.x = (float)point.x * (float)SCALE;
-			rect.y = (float)sdl_viewport.h - (float)(point.y + 1) * (float)SCALE;
-			rect.w = rect.h = (float)SCALE;
+			rect.x = (float)(point.x - viewport().min.x) * (float)g_camera.zoom;
+			rect.y = (float)screen_viewport().max.y;
+			rect.y -= (float)(point.y + 1 - viewport().min.y) * (float)g_camera.zoom;
+			rect.w = rect.h = (float)g_camera.zoom;
 
 			SDL_RenderFillRect(g_renderer, &rect);
 		}
+
+	next:
+		free_grid(&rotated);
 	}
 
 	SDL_RenderPresent(g_renderer);

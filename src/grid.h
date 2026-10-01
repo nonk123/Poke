@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL_stdinc.h>
 
+#include <S_fixed.h>
 #include <S_tructures.h>
 
 #include "palette.h"
@@ -28,3 +29,7 @@ void free_grid(Grid*);
 
 TinyHash crunch_point(GridPoint);
 GridPoint uncrunch_point(TinyHash);
+
+Grid grid_rotate(Grid*, Fixed angle);
+
+AABB viewport();
