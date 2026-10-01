@@ -2,7 +2,7 @@
 
 static const int TICKRATE = 60;
 static const Vec2 GRAVITY = XY(0.0, -9.8);
-#define TIMESTEP (Fdiv(Fx1, FxFrom(TICKRATE)))
+static const Fixed TIMESTEP = Fdiv(Fx1, FxFrom(TICKRATE));
 
 static void resolve_collision(Body* self, Body* other) {}
 
